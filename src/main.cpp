@@ -51,6 +51,7 @@ int main(void){
       sei();
       // Clear ADC Complete Flag
       flag = 0;
+      // TODO: PID Controller 
       // Set PWM Duty Cycle depending on ADC reading (5 to 95%)
       OCR1A = (ADC_value/1024.00)*720 + 40;
     }
