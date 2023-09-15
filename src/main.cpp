@@ -14,7 +14,7 @@ ISR(ADC_vect) {
   ADC_value = ADC;
   // Set Flag for ADC Complete
   flag = 1;
-  // Clear Timer Compare Match Flag
+  // Clear Timer Compare Match Flag A
   TIFR0 = (1 << OCF0A);
 }
 
@@ -24,21 +24,21 @@ int main(void){
   DDRD |= (1 << PD2) | (1 << PD6);
 
   // Initialize Timers 0 and 1
-  InitTimer0(0b010, 49, 0, 0b01, 0b00);
-  InitTimer1(0b1110, 799, 0, 0, 0b10, 0b10);
+  InitTimer0(0b010,       49, 0, 0b01, 0b00);  // WGM,      OCRA, OCRB, COMA, COMB
+  InitTimer1(0b1110, 799,  0, 0, 0b10, 0b10);  // WGM, ICR, OCRA, OCRB, COMA, COMB
 
   // Start Timers 0 and 1
-  StartTimer0(0b010);
-  StartTimer0(0b001);
+  StartTimer0(0b010); // CS
+  StartTimer1(0b001); // CS
 
   // Initialize ADC
-  InitADC(0b01, 0b0, 0b0000, 0b001);
+  InitADC(0b01, 0b0, 0b0000, 0b001); // REFS, LAR, MUX, PRE
 
   // ! Pending: Modify SetADCChannel Function to Disable Digital Input Buffers
   DIDR0 = 0b00000001;
 
   // Start ADC Auto Trigger Mode
-  StartADCAutoTrigger(0b011);
+  StartADCAutoTrigger(0b011); // ATS
 
   // Enable global interrupts
   sei();
