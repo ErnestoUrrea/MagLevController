@@ -1,0 +1,132 @@
+//Codigo para probar el Encoder
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <util/delay.h>
+
+// Micro ports
+#define SW_PORT    PORTD
+#define SW_PIN     PIND
+#define SW_DDR     DDRD
+#define SW_BIT     PD4
+
+#define CLK_PORT   PORTD
+#define CLK_PIN    PIND
+#define CLK_DDR    DDRD
+#define CLK_BIT    PD2
+
+#define DT_PORT    PORTD
+#define DT_PIN     PIND
+#define DT_DDR     DDRD
+#define DT_BIT     PD3
+
+// Current and previous value of the counter tuned by the rotary
+volatile int curVal = 0;
+volatile int prevVal = 0;
+
+// Seven states of FSM (finite state machine)
+#define IDLE_11 0
+#define SCLK_01 1
+#define SCLK_00 2
+#define SCLK_10 3
+#define SDT_10  4
+#define SDT_00  5
+#define SDT_01  6
+
+volatile int state = IDLE_11;
+
+void setup() {
+  // Set the pins as inputs with pull-up resistors
+  //SW_PORT |= (1 << SW_BIT);  // Set SW as input with pull-up
+  SW_DDR &= ~(1 << SW_BIT);  // Set SW pin as input
+
+  //CLK_PORT |= (1 << CLK_BIT);  // Set CLK as input with pull-up
+  CLK_DDR &= ~(1 << CLK_BIT);  // Set CLK pin as input
+
+  //DT_PORT |= (1 << DT_BIT);    // Set DT as input with pull-up
+  DT_DDR &= ~(1 << DT_BIT);    // Set DT pin as input
+
+  EIMSK |= (1 << INT0) | (1 << INT1);
+  EICRA |= (1 << ISC01) | (1 << ISC11);
+
+  // Global interrupts
+  sei();
+}
+
+void loop() {
+  // Handling of the optional switch integrated into some rotary encoders
+  //if (!(SW_PIN & (1 << SW_BIT))) {
+  // Serial.println("Pressed");
+  //  _delay_ms(50);  // Debounce delay
+  //  while (!(SW_PIN & (1 << SW_BIT)));
+  //}
+
+  // Any change in counter value is displayed in Serial Monitor
+  if (curVal != prevVal) {
+    // Serial.println(curVal);
+    prevVal = curVal;
+  }
+}
+
+ISR(INT0_vect) {
+    //Void Rotary CLK
+    if (!(CLK_PORT & (1<<CLK_BIT))) {
+        switch (state) {
+            case IDLE_11:
+                state = SCLK_01; break;
+            case SCLK_10:
+                state = SCLK_00; break;
+            case SDT_10:
+                state = SDT_00; break;
+        }
+    } 
+    else {
+        switch (state) 
+        {
+            case SCLK_01:
+                state = IDLE_11; break;
+            case SCLK_00:
+                state = SCLK_10; break;
+            case SDT_00:
+                state = SDT_10; break;
+            case SDT_01:
+                state = IDLE_11;
+                curVal--; break;
+        }
+    }
+}
+
+ISR(INT1_vect){
+    // ISR for Rotary DT
+    if (!DT_PORT & (1<<DT_BIT)) {
+        switch (state) {
+            case IDLE_11:
+                state = SDT_10; break;
+            case SDT_01:
+                state = SDT_00; break;
+            case SCLK_01:
+                state = SCLK_00; break;
+        }
+    } 
+    else {
+        switch (state) {
+            case SDT_10:
+                state = IDLE_11; break;
+            case SDT_00:
+                state = SDT_01; break;
+            case SCLK_00:
+                state = SCLK_01; break;
+            case SCLK_10:
+                state = IDLE_11;
+                curVal++; break;
+        }
+    }
+}
+
+int main() {
+    setup();
+    while (1) {
+        loop();
+    }
+    return 0;
+}
